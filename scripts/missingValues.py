@@ -57,18 +57,17 @@ def perform_tree_regression(X, y, drop_missing=True):
     """
     # Handle missing values
     if drop_missing:
+        # Drop rows with missing values in X and align y accordingly
         X = X.dropna()
-        y = y[X.index]  # Ensure y matches the X after dropping rows
+        y = y.loc[X.index]  # Select only rows in y that match the new X index
     else:
         X = X.fillna(X.mean())  # Impute with mean
+
+    # Reset indices to avoid misalignment during train-test split
+    X = X.reset_index(drop=True)
+    y = y.reset_index(drop=True)
 
     # Split the data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
-
-    # Create and fit the model
-    model = DecisionTreeRegressor(random_state=42)
-    model.fit(X_train, y_train)
-
-    return model
