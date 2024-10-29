@@ -13,14 +13,25 @@ def difference(df, column1, column2):
 
 
 def adjust_for_inflation(df1, df2, year1, attribute):
-    merged_df = pd.merge(df1, df2[['year', 'HPI']],
+    # Create a subset of df1 with year1 and attribute
+    subset_df1 = df1[[year1, attribute]].copy()
+
+    # Merge the subset with df2 to get HPI
+    merged_df = pd.merge(subset_df1, df2[['year', 'HPI']],
                          left_on=year1, right_on='year', how='left')
 
+    # Calculate the inflation factor based on the base year HPI
     base_year_hpi = merged_df.loc[merged_df['year'] == 2023, 'HPI'].iloc[0]
     merged_df['inflation_factor'] = base_year_hpi / merged_df['HPI']
+
+    # Calculate the adjusted attribute
     adjusted_attribute = f"adjusted_{attribute}"
     merged_df[adjusted_attribute] = merged_df[attribute] * \
         merged_df['inflation_factor']
 
-    # Drop only unnecessary columns and return only relevant columns
-    return merged_df.drop(columns=['year', 'inflation_factor', 'HPI'], errors='ignore')
+    # Merge the adjusted attribute back to the original df1
+    df1 = df1.merge(merged_df[[year1, adjusted_attribute]],
+                    on=year1,
+                    how='left')
+
+    return df1
