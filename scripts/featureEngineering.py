@@ -36,10 +36,17 @@ def adjust_prices(kingcoSales, kingcoIndex, base_year=2024):
         how='left'
     )
 
+    # Debug: Check columns in merged_sale_df
+    print("Columns after sale year merge:", merged_sale_df.columns)
+
     # Calculate the inflation adjustment factor using sale_year
     base_year_hpi_sale = merged_sale_df.loc[merged_sale_df['year']
-                                            == base_year, 'HPI'].iloc[0]
-    merged_sale_df['inflation_factor_sale'] = base_year_hpi_sale / \
+                                            == base_year, 'HPI']
+    if base_year_hpi_sale.empty:
+        raise ValueError(f"No HPI data found for base year {
+                         base_year} in sale year data.")
+
+    merged_sale_df['inflation_factor_sale'] = base_year_hpi_sale.iloc[0] / \
         merged_sale_df['HPI']
 
     # Adjust the sale_price for inflation
@@ -55,16 +62,23 @@ def adjust_prices(kingcoSales, kingcoIndex, base_year=2024):
         how='left'
     )
 
+    # Debug: Check columns in merged_join_df
+    print("Columns after join year merge:", merged_join_df.columns)
+
     # Calculate the inflation adjustment factor using join_year
     base_year_hpi_join = merged_join_df.loc[merged_join_df['year']
-                                            == base_year, 'HPI'].iloc[0]
-    merged_join_df['inflation_factor_join'] = base_year_hpi_join / \
+                                            == base_year, 'HPI']
+    if base_year_hpi_join.empty:
+        raise ValueError(f"No HPI data found for base year {
+                         base_year} in join year data.")
+
+    merged_join_df['inflation_factor_join'] = base_year_hpi_join.iloc[0] / \
         merged_join_df['HPI']
 
     # Calculate adjusted_imp_value and adjusted_land_value using the join_year inflation factor
-    merged_join_df['adjusted_imp_value'] = merged_join_df['imp_value'] * \
+    merged_join_df['adjusted_imp_value'] = merged_join_df['imp_val'] * \
         merged_join_df['inflation_factor_join']
-    merged_join_df['adjusted_land_value'] = merged_join_df['land_value'] * \
+    merged_join_df['adjusted_land_value'] = merged_join_df['land_val'] * \
         merged_join_df['inflation_factor_join']
 
     # Select only the relevant columns and drop unnecessary ones
@@ -72,3 +86,6 @@ def adjust_prices(kingcoSales, kingcoIndex, base_year=2024):
                                'adjusted_imp_value', 'adjusted_land_value']]
 
     return final_df
+
+# Example usage:
+# adjusted_df = adjust_prices(king_county_sales_df, king_county_index_df, base_year=2023)
