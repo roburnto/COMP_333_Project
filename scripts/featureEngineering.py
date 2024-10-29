@@ -13,7 +13,6 @@ def difference(df, column1, column2):
 
 
 def adjust_for_inflation(df1, df2, year1, attribute):
-
     merged_df = pd.merge(df1, df2[['year', 'HPI']],
                          left_on=year1, right_on='year', how='left')
 
@@ -22,5 +21,6 @@ def adjust_for_inflation(df1, df2, year1, attribute):
     adjusted_attribute = f"adjusted_{attribute}"
     merged_df[adjusted_attribute] = merged_df[attribute] * \
         merged_df['inflation_factor']
-    merged_df = merged_df.drop(['year', 'inflation_factor', 'HPI'], axis=1)
-    return merged_df
+
+    # Drop only unnecessary columns and return only relevant columns
+    return merged_df.drop(columns=['year', 'inflation_factor', 'HPI'], errors='ignore')
