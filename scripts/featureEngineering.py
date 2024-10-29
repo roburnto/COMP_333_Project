@@ -78,3 +78,12 @@ def process_sales_data(df_hpi, df_sales):
     df_sales = pd.concat([df_sales, adjusted_values], axis=1)
 
     return df_sales
+
+
+def target_encode(df, target_col, cat_cols):
+    for col in cat_cols:
+        # Calculate mean of the target variable for each category
+        mean_target = df.groupby(col)[target_col].mean()
+        # Map the mean values back to the original DataFrame
+        df[col + '_encoded'] = df[col].map(mean_target)
+    return df
