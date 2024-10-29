@@ -6,7 +6,7 @@ def load_data(file_path):
 
 
 def view_data(df):
-    df.info()
+    print(df.info())
     df.describe()
     return
 

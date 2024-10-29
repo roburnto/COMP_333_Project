@@ -22,5 +22,5 @@ def adjust_for_inflation(df1, df2, year1, attribute):
     adjusted_attribute = f"adjusted_{attribute}"
     merged_df[adjusted_attribute] = merged_df[attribute] * \
         merged_df['inflation_factor']
-    merged_df = merged_df.drop(['year', 'inflation_factor'], axis=1)
+    merged_df = merged_df.drop(['year', 'inflation_factor', 'HPI'], axis=1)
     return merged_df
