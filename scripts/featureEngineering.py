@@ -12,80 +12,69 @@ def difference(df, column1, column2):
     return df
 
 
-def adjust_prices(kingcoSales, kingcoIndex, base_year=2024):
+def create_hpi_mapping(df_hpi):
     """
-    Adjust sale prices, improvement values, and land values for inflation 
-    using the HPI from the kingcoIndex DataFrame.
+    Create a mapping of HPI for the years relevant to the sales and joining.
 
     Parameters:
-    - kingcoSales (DataFrame): DataFrame containing sales data with 'sale_price', 'join_year', and 'sale_year'.
-    - kingcoIndex (DataFrame): DataFrame containing HPI data with 'year' and 'HPI'.
-    - base_year (int): The year to use as the base for inflation adjustment (default is 2024).
+        df_hpi (DataFrame): DataFrame containing 'HPI' and 'year'.
 
     Returns:
-    - DataFrame: Updated DataFrame with adjusted sale prices, adjusted improvement values, 
-                  and adjusted land values, without inflation factors and HPI.
+        dict: A dictionary mapping year to HPI.
     """
+    return df_hpi.set_index('year')['HPI'].to_dict()
 
-    # Merge the two DataFrames based on the sale_year
-    merged_sale_df = pd.merge(
-        kingcoSales,
-        kingcoIndex[['year', 'HPI']],
-        left_on='sale_year',
-        right_on='year',
-        how='left'
-    )
 
-    # Debug: Check columns in merged_sale_df
-    print("Columns after sale year merge:", merged_sale_df.columns)
+def adjust_prices(row, hpi_mapping):
+    """
+    Adjust sale_price, imp_val, and land_val based on HPI values.
 
-    # Calculate the inflation adjustment factor using sale_year
-    base_year_hpi_sale = merged_sale_df.loc[merged_sale_df['year']
-                                            == base_year, 'HPI']
-    if base_year_hpi_sale.empty:
-        raise ValueError(f"No HPI data found for base year {
-                         base_year} in sale year data.")
+    Parameters:
+        row (Series): A row from the sales DataFrame.
+        hpi_mapping (dict): A dictionary mapping year to HPI.
 
-    merged_sale_df['inflation_factor_sale'] = base_year_hpi_sale.iloc[0] / \
-        merged_sale_df['HPI']
+    Returns:
+        Series: Adjusted values for sale_price, imp_val, and land_val.
+    """
+    # Extract the HPI for sale_year and join_year
+    sale_year = row['sale_year']
+    join_year = row['join_year']
 
-    # Adjust the sale_price for inflation
-    merged_sale_df['adjusted_sale_price'] = merged_sale_df['sale_price'] * \
-        merged_sale_df['inflation_factor_sale']
+    hpi_sale = hpi_mapping.get(sale_year, 1)  # Default to 1 if year not found
+    hpi_join = hpi_mapping.get(join_year, 1)  # Default to 1 if year not found
+    hpi_2023 = hpi_mapping.get(2023, 1)  # Default to 1 if year not found
 
-    # Now merge with kingcoIndex again for join_year calculations
-    merged_join_df = pd.merge(
-        merged_sale_df,
-        kingcoIndex[['year', 'HPI']],
-        left_on='join_year',
-        right_on='year',
-        how='left'
-    )
+    # Adjust sale_price, imp_val, and land_val
+    adjusted_sale_price = row['sale_price'] * (hpi_2023 / hpi_sale)
+    adjusted_imp_val = row['imp_val'] * (hpi_2023 / hpi_join)
+    adjusted_land_val = row['land_val'] * (hpi_2023 / hpi_join)
 
-    # Debug: Check columns in merged_join_df
-    print("Columns after join year merge:", merged_join_df.columns)
+    return pd.Series({
+        'adjusted_sale_price': adjusted_sale_price,
+        'adjusted_imp_val': adjusted_imp_val,
+        'adjusted_land_val': adjusted_land_val
+    })
 
-    # Calculate the inflation adjustment factor using join_year
-    base_year_hpi_join = merged_join_df.loc[merged_join_df['year']
-                                            == base_year, 'HPI']
-    if base_year_hpi_join.empty:
-        raise ValueError(f"No HPI data found for base year {
-                         base_year} in join year data.")
 
-    merged_join_df['inflation_factor_join'] = base_year_hpi_join.iloc[0] / \
-        merged_join_df['HPI']
+def process_sales_data(df_hpi, df_sales):
+    """
+    Process sales data by adjusting prices based on HPI.
 
-    # Calculate adjusted_imp_value and adjusted_land_value using the join_year inflation factor
-    merged_join_df['adjusted_imp_value'] = merged_join_df['imp_val'] * \
-        merged_join_df['inflation_factor_join']
-    merged_join_df['adjusted_land_value'] = merged_join_df['land_val'] * \
-        merged_join_df['inflation_factor_join']
+    Parameters:
+        df_hpi (DataFrame): DataFrame containing HPI data.
+        df_sales (DataFrame): DataFrame containing sales data.
 
-    # Select only the relevant columns and drop unnecessary ones
-    final_df = merged_join_df[['adjusted_sale_price',
-                               'adjusted_imp_value', 'adjusted_land_value']]
+    Returns:
+        DataFrame: The original sales DataFrame with adjusted price columns added.
+    """
+    # Create HPI mapping
+    hpi_mapping = create_hpi_mapping(df_hpi)
 
-    return final_df
+    # Apply the adjustment function to the sales DataFrame
+    adjusted_values = df_sales.apply(
+        adjust_prices, axis=1, hpi_mapping=hpi_mapping)
 
-# Example usage:
-# adjusted_df = adjust_prices(king_county_sales_df, king_county_index_df, base_year=2023)
+    # Combine the adjusted values back into the original sales DataFrame
+    df_sales = pd.concat([df_sales, adjusted_values], axis=1)
+
+    return df_sales
