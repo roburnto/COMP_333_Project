@@ -41,40 +41,34 @@ def analyze_missing_values(data):
     print(missing_info[missing_info['Missing Values'] > 0])
 
 
-def perform_tree_regression(data, target_column, drop_missing=True):
+def perform_tree_regression(X, y, drop_missing=True):
     """
     Performs a Decision Tree Regression on the dataset, either dropping missing values
     or imputing them with the mean.
 
     Parameters:
-    - data (pd.DataFrame): DataFrame to analyze.
-    - target_column (str): The target column to predict.
+    - X (pd.DataFrame): Feature DataFrame.
+    - y (pd.Series): Target variable.
     - drop_missing (bool): Whether to drop missing values or impute.
 
     Returns:
     - model (DecisionTreeRegressor): The fitted regression model.
     - mse (float): The mean squared error of the model.
     """
-    # Prepare the features and target
-    X = data.drop(columns=[target_column])
-    y = data[target_column]
-
     # Handle missing values
     if drop_missing:
         X = X.dropna()
-        y = y[X.index]  # Ensure y matches the X after dropping
+        y = y[X.index]  # Ensure y matches the X after dropping rows
     else:
         X = X.fillna(X.mean())  # Impute with mean
 
     # Split the data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42)
+        X, y, test_size=0.2, random_state=42
+    )
 
     # Create and fit the model
     model = DecisionTreeRegressor(random_state=42)
     model.fit(X_train, y_train)
-
-    # Predict and compute the mean squared error
-    predictions = model.predict(X_test)
 
     return model
